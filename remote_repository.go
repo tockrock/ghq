@@ -167,6 +167,11 @@ func (repo *OtherRepository) VCS() *VCSBackend {
 		utils.Log("warning", "This version of Git does not support `config --get-urlmatch`; per-URL settings are not available")
 	}
 
+	if repo.url.User != nil && repo.url.User.Username() == "git" {
+		// If the URL is a form of "git@...", then it must be a git URL
+		return GitBackend
+	}
+
 	// Detect VCS backend automatically
 	if utils.RunSilently("git", "ls-remote", repo.url.String()) == nil {
 		return GitBackend

@@ -17,7 +17,7 @@ func parseURL(urlString string) *url.URL {
 	return u
 }
 
-func TestNewRemoteRepositoryGitHub(t *testing.T) {
+func TestNewRemoteRepository_GitHub(t *testing.T) {
 	RegisterTestingT(t)
 
 	var (
@@ -44,7 +44,7 @@ func TestNewRemoteRepositoryGitHub(t *testing.T) {
 	Expect(repo.IsValid()).To(Equal(true))
 }
 
-func TestNewRemoteRepositoryGitHubGist(t *testing.T) {
+func TestNewRemoteRepository_GitHubGist(t *testing.T) {
 	RegisterTestingT(t)
 
 	var (
@@ -58,7 +58,7 @@ func TestNewRemoteRepositoryGitHubGist(t *testing.T) {
 	Expect(repo.VCS()).To(Equal(GitBackend))
 }
 
-func TestNewRemoteRepositoryGoogleCode(t *testing.T) {
+func TestNewRemoteRepository_GoogleCode(t *testing.T) {
 	RegisterTestingT(t)
 
 	var (
@@ -85,11 +85,28 @@ func TestNewRemoteRepositoryGoogleCode(t *testing.T) {
 	Expect(repo.VCS()).To(Equal(GitBackend))
 }
 
-func TestNewRemoteRepositoryDarcsHub(t *testing.T) {
+func TestNewRemoteRepository_DarcsHub(t *testing.T) {
 	RegisterTestingT(t)
 
 	repo, err := NewRemoteRepository(parseURL("http://hub.darcs.net/foo/bar"))
 	Expect(err).To(BeNil())
 	Expect(repo.IsValid()).To(Equal(true))
 	Expect(repo.VCS()).To(Equal(DarcsBackend))
+}
+
+func TestNewRemoteRepository_GitOthers(t *testing.T) {
+	RegisterTestingT(t)
+
+	utils.CommandRunner = NewFakeRunner(map[string]error{
+		"hg identify":   errors.New(""),
+		"git ls-remote": errors.New(""),
+	})
+
+	u, err := NewURL("git@example.com:user/repo")
+	Expect(err).To(BeNil())
+
+	repo, err := NewRemoteRepository(u)
+	Expect(err).To(BeNil())
+	Expect(repo.IsValid()).To(Equal(true))
+	Expect(repo.VCS()).To(Equal(GitBackend))
 }
