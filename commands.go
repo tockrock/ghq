@@ -11,8 +11,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/codegangsta/cli"
 	"github.com/motemen/ghq/utils"
+	"github.com/urfave/cli"
 )
 
 var Commands = []cli.Command{
