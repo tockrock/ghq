@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/motemen/ghq/utils"
+	"github.com/skratchdot/open-golang/open"
 	"github.com/urfave/cli"
 )
 
@@ -67,6 +68,9 @@ var commandLook = cli.Command{
     Look into a locally cloned repository with the shell.
 `,
 	Action: doLook,
+	Flags: []cli.Flag{
+		cli.BoolFlag{Name: "url, u", Usage: "Perform an exact match"},
+	},
 }
 
 var commandImport = cli.Command{
@@ -295,6 +299,7 @@ func doList(c *cli.Context) error {
 
 func doLook(c *cli.Context) error {
 	name := c.Args().First()
+	browser := c.Bool("url")
 
 	if name == "" {
 		cli.ShowCommandHelp(c, "look")
@@ -328,29 +333,38 @@ func doLook(c *cli.Context) error {
 		os.Exit(1)
 
 	case 1:
-		if runtime.GOOS == "windows" {
-			cmd := exec.Command(os.Getenv("COMSPEC"))
-			cmd.Stdin = os.Stdin
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-			cmd.Dir = reposFound[0].FullPath
-			err := cmd.Start()
-			if err == nil {
-				cmd.Wait()
-				os.Exit(0)
-			}
+		foundRepo := reposFound[0]
+		fullPath := foundRepo.FullPath
+		relpath := foundRepo.RelPath
+
+		if browser {
+			open.Run("https://" + relpath)
+
 		} else {
-			shell := os.Getenv("SHELL")
-			if shell == "" {
-				shell = "/bin/sh"
+			if runtime.GOOS == "windows" {
+				cmd := exec.Command(os.Getenv("COMSPEC"))
+				cmd.Stdin = os.Stdin
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				cmd.Dir = fullPath
+				err := cmd.Start()
+				if err == nil {
+					cmd.Wait()
+					os.Exit(0)
+				}
+			} else {
+				shell := os.Getenv("SHELL")
+				if shell == "" {
+					shell = "/bin/sh"
+				}
+
+				utils.Log("cd", fullPath)
+				err := os.Chdir(fullPath)
+				utils.PanicIf(err)
+
+				env := append(syscall.Environ(), "GHQ_LOOK="+relpath)
+				syscall.Exec(shell, []string{shell}, env)
 			}
-
-			utils.Log("cd", reposFound[0].FullPath)
-			err := os.Chdir(reposFound[0].FullPath)
-			utils.PanicIf(err)
-
-			env := append(syscall.Environ(), "GHQ_LOOK="+reposFound[0].RelPath)
-			syscall.Exec(shell, []string{shell}, env)
 		}
 
 	default:
